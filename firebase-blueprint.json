@@ -1,0 +1,87 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Unisales student profile.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "ra": { "type": "string", "description": "Student Registration Number" },
+        "role": { "type": "string", "enum": ["student", "admin"] }
+      },
+      "required": ["name", "email", "ra"]
+    },
+    "Donation": {
+      "title": "Donation",
+      "description": "Electronic item listed for donation.",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "condition": { "type": "string", "enum": ["Novo", "Usado - Bom", "Para Conserto"] },
+        "photos": { "type": "array", "items": { "type": "string" } },
+        "donorId": { "type": "string" },
+        "status": { "type": "string", "enum": ["available", "requested", "donated"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "description", "condition", "donorId", "status"]
+    },
+    "Request": {
+      "title": "Request",
+      "description": "Interest request for a donation.",
+      "type": "object",
+      "properties": {
+        "donationId": { "type": "string" },
+        "requesterId": { "type": "string" },
+        "explanation": { "type": "string", "description": "Why the user wants the item." },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["donationId", "requesterId", "explanation", "status"]
+    },
+    "Chat": {
+      "title": "Chat",
+      "description": "Conversation between donor and requester.",
+      "type": "object",
+      "properties": {
+        "donationId": { "type": "string" },
+        "donorId": { "type": "string" },
+        "requesterId": { "type": "string" },
+        "lastMessage": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["donationId", "donorId", "requesterId"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "Individual chat message.",
+      "type": "object",
+      "properties": {
+        "chatId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["chatId", "senderId", "text"]
+    },
+    "Event": {
+      "title": "Event",
+      "description": "E-waste collection event metrics.",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "format": "date" },
+        "totalCollectedKg": { "type": "number" }
+      },
+      "required": ["date", "totalCollectedKg"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": { "schema": "User", "description": "User profiles." },
+    "/donations/{donationId}": { "schema": "Donation", "description": "Donation listings." },
+    "/requests/{requestId}": { "schema": "Request", "description": "Donation requests." },
+    "/chats/{chatId}": { "schema": "Chat", "description": "Chat sessions." },
+    "/chats/{chatId}/messages/{messageId}": { "schema": "Message", "description": "Chat messages." },
+    "/events/{eventId}": { "schema": "Event", "description": "Impact metrics." }
+  }
+}
