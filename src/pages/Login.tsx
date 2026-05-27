@@ -33,8 +33,19 @@ export default function Login() {
     <div className="max-w-md mx-auto mt-12">
       <div className="bg-zinc-900 p-8 rounded-3xl border border-zinc-800 shadow-2xl">
         <div className="text-center mb-10">
-          <div className="w-16 h-16 bg-[#FF8C00] rounded-full mx-auto flex items-center justify-center mb-4 shadow-[0_0_20px_rgba(255,140,0,0.3)]">
-            <span className="text-black font-black text-2xl">0</span>
+          <div className="w-16 h-16 mx-auto flex items-center justify-center mb-4 transition-transform hover:scale-105">
+            <svg viewBox="0 0 100 100" className="w-full h-full select-none" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Orange segment: Top horizontal bar and diagonal left side */}
+              <path
+                d="M 31.5 35 C 31.5 30.5 35 28 41 28 L 72.5 28 L 31.5 69 L 31.5 59 L 51 39.5 L 31.5 35 Z"
+                fill="#FF8C00"
+              />
+              {/* White segment: Parallel diagonal line on the right and bottom wing */}
+              <path
+                d="M 65.5 42 L 42 65.5 L 71 65.5 C 71 65.5 65.5 59 65.5 53.5 L 65.5 42 Z"
+                fill="#FFFFFF"
+              />
+            </svg>
           </div>
           <h1 className="text-3xl font-black tracking-tighter">BEM-VINDO DE VOLTA</h1>
           <p className="text-zinc-500 mt-2">Acesse sua conta ZeroVinTTech</p>

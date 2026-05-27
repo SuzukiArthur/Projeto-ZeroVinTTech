@@ -13,6 +13,7 @@ import DonationDetail from './pages/DonationDetail';
 import CreateDonation from './pages/CreateDonation';
 import Events from './pages/Events';
 import Chat from './pages/Chat';
+import Chats from './pages/Chats';
 import Profile from './pages/Profile';
 import ForgotPassword from './pages/ForgotPassword';
 
@@ -94,6 +95,7 @@ export default function App() {
             <Route path="/create-donation" element={user ? <CreateDonation /> : <Navigate to="/login" />} />
             <Route path="/events" element={<Events />} />
             <Route path="/chat/:id" element={user ? <Chat /> : <Navigate to="/login" />} />
+            <Route path="/chats" element={user ? <Chats /> : <Navigate to="/login" />} />
             <Route path="/profile" element={user ? <Profile profile={profile} /> : <Navigate to="/login" />} />
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
