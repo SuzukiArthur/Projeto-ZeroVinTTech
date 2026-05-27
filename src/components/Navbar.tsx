@@ -52,11 +52,22 @@ export default function Navbar({ user, profile }: NavbarProps) {
   return (
     <nav className="bg-black border-b border-[#FF8C00]/20 sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center space-x-3 group">
-          <div className="relative w-10 h-10 flex items-center justify-center">
-            <div className="absolute inset-0 bg-[#FF8C00] rounded-xl rotate-6 group-hover:rotate-12 transition-transform duration-300 opacity-20"></div>
-            <div className="absolute inset-0 border-2 border-[#FF8C00] rounded-xl -rotate-3 group-hover:rotate-0 transition-transform duration-300"></div>
-            <span className="text-[#FF8C00] font-black text-xl z-10">0</span>
+        <Link to="/" className="flex items-center space-x-2.5 group">
+          <div className="relative w-11 h-11 flex items-center justify-center transition-transform duration-300 group-hover:scale-105 active:scale-95">
+            <svg viewBox="0 0 100 100" className="w-full h-full select-none" fill="none" xmlns="http://www.w3.org/2000/svg">
+              {/* Orange segment: Top horizontal bar and diagonal left side */}
+              <path
+                d="M 31.5 35 C 31.5 30.5 35 28 41 28 L 72.5 28 L 31.5 69 L 31.5 59 L 51 39.5 L 31.5 35 Z"
+                fill="#FF8C00"
+                className="transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:-translate-x-0.5"
+              />
+              {/* White segment: Parallel diagonal line on the right and bottom wing */}
+              <path
+                d="M 65.5 42 L 42 65.5 L 71 65.5 C 71 65.5 65.5 59 65.5 53.5 L 65.5 42 Z"
+                fill="#FFFFFF"
+                className="transition-transform duration-300 group-hover:translate-y-0.5 group-hover:translate-x-0.5"
+              />
+            </svg>
           </div>
           <span className="text-2xl font-black tracking-tighter flex items-center">
             <span className="text-white">Zero</span>

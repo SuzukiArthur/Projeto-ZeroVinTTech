@@ -19,13 +19,15 @@
       "properties": {
         "title": { "type": "string" },
         "description": { "type": "string" },
+        "category": { "type": "string", "enum": ["periferico", "componente eletronico", "notebook", "celular", "videogame", "pc", "rede", "outros"] },
         "condition": { "type": "string", "enum": ["Novo", "Usado - Bom", "Para Conserto"] },
         "photos": { "type": "array", "items": { "type": "string" } },
         "donorId": { "type": "string" },
+        "donorName": { "type": "string" },
         "status": { "type": "string", "enum": ["available", "requested", "donated"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["title", "description", "condition", "donorId", "status"]
+      "required": ["title", "description", "category", "condition", "donorId", "donorName", "status"]
     },
     "Request": {
       "title": "Request",
@@ -34,11 +36,12 @@
       "properties": {
         "donationId": { "type": "string" },
         "requesterId": { "type": "string" },
+        "requesterName": { "type": "string" },
         "explanation": { "type": "string", "description": "Why the user wants the item." },
         "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["donationId", "requesterId", "explanation", "status"]
+      "required": ["donationId", "requesterId", "requesterName", "explanation", "status"]
     },
     "Chat": {
       "title": "Chat",
@@ -48,10 +51,11 @@
         "donationId": { "type": "string" },
         "donorId": { "type": "string" },
         "requesterId": { "type": "string" },
+        "donationTitle": { "type": "string" },
         "lastMessage": { "type": "string" },
         "updatedAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["donationId", "donorId", "requesterId"]
+      "required": ["donationId", "donorId", "requesterId", "donationTitle"]
     },
     "Message": {
       "title": "Message",
@@ -60,6 +64,7 @@
       "properties": {
         "chatId": { "type": "string" },
         "senderId": { "type": "string" },
+        "senderPhotoURL": { "type": "string" },
         "text": { "type": "string" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
