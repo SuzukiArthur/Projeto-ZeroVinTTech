@@ -54,7 +54,7 @@ export default function Register() {
       } else if (err.code === 'auth/weak-password') {
         setError('A senha deve ter pelo menos 6 caracteres.');
       } else {
-        setError('Erro ao criar conta. Verifique os dados digitados e tente novamente.');
+        setError(`Erro ao criar conta: ${err.message || err.code || err.toString()}`);
       }
     } finally {
       setLoading(false);
