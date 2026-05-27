@@ -16,17 +16,15 @@ export default function Login() {
     setLoading(true);
     setError('');
     
-    // Mock Login for visual navigation
-    setTimeout(() => {
-      const mockUser = {
-        uid: 'mock-user-123',
-        email: email,
-        displayName: 'Usuário Teste'
-      };
-      localStorage.setItem('mockUser', JSON.stringify(mockUser));
-      localStorage.setItem('originalMockUser', JSON.stringify(mockUser));
-      window.location.href = '/'; // Force reload to update App state
-    }, 800);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      navigate('/');
+    } catch (err: any) {
+      console.error(err);
+      setError('E-mail ou senha incorretos, ou usuário não cadastrado. Verifique suas credenciais.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

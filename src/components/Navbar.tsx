@@ -19,36 +19,6 @@ export default function Navbar({ user, profile }: NavbarProps) {
     window.location.href = '/login'; // Force reload to clear state
   };
 
-  const switchUser = (type: 'original' | 'requester') => {
-    const current = localStorage.getItem('mockUser') ? JSON.parse(localStorage.getItem('mockUser')!) : null;
-    const isCurrentlyRequester = current?.uid === 'mock-requester-456';
-
-    if (type === 'original') {
-      const originalUser = localStorage.getItem('originalMockUser');
-      if (originalUser) {
-        localStorage.setItem('mockUser', originalUser);
-      }
-    } else {
-      // If we are NOT currently the requester, save our current account as the original
-      if (!isCurrentlyRequester && current) {
-        localStorage.setItem('originalMockUser', JSON.stringify(current));
-      }
-      
-      const requesterUser = { 
-        uid: 'mock-requester-456', 
-        displayName: 'Ana Interessada', 
-        email: 'ana@unisales.edu.br' 
-      };
-      localStorage.setItem('mockUser', JSON.stringify(requesterUser));
-    }
-    window.location.reload();
-  };
-
-  const originalUser = localStorage.getItem('originalMockUser') ? JSON.parse(localStorage.getItem('originalMockUser')!) : null;
-  const originalName = originalUser?.displayName?.split(' ')[0] || 'Minha Conta';
-  
-  const isMockRequester = user?.uid === 'mock-requester-456';
-
   return (
     <nav className="bg-black border-b border-[#FF8C00]/20 sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -94,22 +64,6 @@ export default function Navbar({ user, profile }: NavbarProps) {
 
           {user ? (
             <>
-              {/* User Switcher for Testing */}
-              <div className="flex items-center bg-zinc-900 rounded-full px-1 py-1 border border-zinc-800 scale-75 sm:scale-100">
-                <button 
-                  onClick={() => switchUser('original')}
-                  className={`px-2 sm:px-3 py-1 rounded-full text-[8px] sm:text-[10px] font-bold uppercase transition-all ${!isMockRequester ? 'bg-[#FF8C00] text-black' : 'text-zinc-500 hover:text-white'}`}
-                >
-                  {originalName}
-                </button>
-                <button 
-                  onClick={() => switchUser('requester')}
-                  className={`px-2 sm:px-3 py-1 rounded-full text-[8px] sm:text-[10px] font-bold uppercase transition-all ${isMockRequester ? 'bg-[#FF8C00] text-black' : 'text-zinc-500 hover:text-white'}`}
-                >
-                  Ana (Teste)
-                </button>
-              </div>
-
               <Link to="/create-donation" className="bg-[#FF8C00] text-black px-4 py-1.5 rounded-full font-semibold hover:bg-[#FF8C00]/80 transition-colors flex items-center space-x-1">
                 <PlusCircle size={18} />
                 <span>Doar</span>

@@ -31,20 +31,34 @@ export default function Register() {
     setLoading(true);
     setError('');
     
-    // Mock Register for visual navigation
-    setTimeout(() => {
-      const mockUser = {
-        uid: 'mock-user-' + Math.random().toString(36).substr(2, 9),
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const firebaseUser = userCredential.user;
+      
+      // Save profile doc to Firestore
+      const userProfile = {
+        uid: firebaseUser.uid,
+        name: name,
         email: email,
-        displayName: name,
         ra: ra,
         photoURL: photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${name}`,
         role: 'student'
       };
-      localStorage.setItem('mockUser', JSON.stringify(mockUser));
-      localStorage.setItem('originalMockUser', JSON.stringify(mockUser));
-      window.location.href = '/'; // Force reload to update App state
-    }, 800);
+      
+      await setDoc(doc(db, 'users', firebaseUser.uid), userProfile);
+      navigate('/');
+    } catch (err: any) {
+      console.error(err);
+      if (err.code === 'auth/email-already-in-use') {
+        setError('O endereço de e-mail já está sendo utilizado.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('A senha deve ter pelo menos 6 caracteres.');
+      } else {
+        setError('Erro ao criar conta. Verifique os dados digitados e tente novamente.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

@@ -39,23 +39,6 @@ export default function App() {
     };
     testConnection();
 
-    // Check for mock user in localStorage
-    const mockUserStr = localStorage.getItem('mockUser');
-    if (mockUserStr) {
-      const mockUser = JSON.parse(mockUserStr);
-      setUser(mockUser);
-      setProfile({
-        uid: mockUser.uid,
-        name: mockUser.displayName || 'Usuário Teste',
-        email: mockUser.email || 'teste@exemplo.com',
-        ra: mockUser.ra || '12345678',
-        photoURL: mockUser.photoURL,
-        role: 'student'
-      });
-      setLoading(false);
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser);
       if (firebaseUser) {
