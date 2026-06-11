@@ -86,8 +86,12 @@ export default function Chat() {
   }, [donationId]);
 
   useEffect(() => {
+    if (donationId) {
+      localStorage.setItem(`lastRead_${donationId}`, new Date().toISOString());
+      window.dispatchEvent(new Event('focus'));
+    }
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, donationId]);
 
   const handleSendMessage = async (text: string) => {
     const user = auth.currentUser;

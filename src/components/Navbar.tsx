@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User } from 'firebase/auth';
-import { auth } from '../firebase';
-import { UserProfile } from '../types';
+import { auth, db } from '../firebase';
+import { UserProfile, Donation } from '../types';
 import { LogOut, User as UserIcon, PlusCircle, Calendar, MessageSquare, Home } from 'lucide-react';
+import { collection, getDocs, onSnapshot } from 'firebase/firestore';
 
 interface NavbarProps {
   user: User | null;
@@ -14,6 +15,7 @@ export default function Navbar({ user, profile }: NavbarProps) {
   const navigate = useNavigate();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleLogout = async () => {
     localStorage.removeItem('mockUser');
@@ -33,6 +35,136 @@ export default function Navbar({ user, profile }: NavbarProps) {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setUnreadCount(0);
+      return;
+    }
+
+    let unsubscribeMessages = () => {};
+    let unsubscribeRequests = () => {};
+    let unsubscribeDonations = () => {};
+
+    const calculateUnread = async () => {
+      try {
+        const allMockDonations: Donation[] = JSON.parse(localStorage.getItem('mockDonations') || '[]');
+        const allMockMessages = JSON.parse(localStorage.getItem('mockMessages') || '[]');
+        const allMockRequests = JSON.parse(localStorage.getItem('mockRequests') || '[]');
+
+        let realDonations: Donation[] = [];
+        let realMessages: any[] = [];
+        let realRequests: any[] = [];
+
+        try {
+          const dSnap = await getDocs(collection(db, 'donations'));
+          realDonations = dSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Donation));
+
+          const mSnap = await getDocs(collection(db, 'messages'));
+          realMessages = mSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+          const rSnap = await getDocs(collection(db, 'requests'));
+          realRequests = rSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (err) {
+          console.warn('Navbar Firestore fetch error:', err);
+        }
+
+        const dMap = new Map<string, Donation>();
+        realDonations.forEach(d => {
+          if (d.id) dMap.set(d.id, d);
+        });
+        allMockDonations.forEach(d => {
+          if (d.id && !dMap.has(d.id)) {
+            dMap.set(d.id, d);
+          }
+        });
+        const mergedDonations = Array.from(dMap.values());
+
+        const msgMap = new Map<string, any>();
+        realMessages.forEach(m => {
+          if (m.id) msgMap.set(m.id, m);
+        });
+        allMockMessages.forEach((m: any) => {
+          if (m.id && !msgMap.has(m.id)) {
+            msgMap.set(m.id, m);
+          }
+        });
+        const mergedMessages = Array.from(msgMap.values());
+
+        const reqMap = new Map<string, any>();
+        realRequests.forEach(r => {
+          if (r.id) reqMap.set(r.id, r);
+        });
+        allMockRequests.forEach((r: any) => {
+          if (r.id && !reqMap.has(r.id)) {
+            reqMap.set(r.id, r);
+          }
+        });
+        const mergedRequests = Array.from(reqMap.values());
+
+        const uniqueDonationIds: string[] = Array.from(new Set(mergedMessages.map((m: any) => m.donationId)));
+
+        let count = 0;
+        uniqueDonationIds.forEach(dId => {
+          const donationObj = mergedDonations.find(d => d.id === dId);
+          if (!donationObj) return;
+
+          const roomMessages = mergedMessages.filter((m: any) => m.donationId === dId);
+          if (roomMessages.length === 0) return;
+
+          const isDonor = donationObj.donorId === user.uid;
+          const isRequester = mergedRequests.some(r => r.donationId === dId && r.requesterId === user.uid);
+          const hasSentMessage = roomMessages.some(m => m.senderId === user.uid);
+
+          const isParticipant = isDonor || isRequester || hasSentMessage;
+          if (!isParticipant) return;
+
+          const lastMsg = roomMessages[roomMessages.length - 1];
+          if (lastMsg && lastMsg.senderId !== user.uid) {
+            const lastRead = localStorage.getItem(`lastRead_${dId}`);
+            if (!lastRead || new Date(lastMsg.createdAt).getTime() > new Date(lastRead).getTime()) {
+              count++;
+            }
+          }
+        });
+
+        setUnreadCount(count);
+      } catch (err) {
+        console.error('Error calculating unread custom:', err);
+      }
+    };
+
+    calculateUnread();
+
+    try {
+      unsubscribeMessages = onSnapshot(collection(db, 'messages'), () => {
+        calculateUnread();
+      });
+      unsubscribeRequests = onSnapshot(collection(db, 'requests'), () => {
+        calculateUnread();
+      });
+      unsubscribeDonations = onSnapshot(collection(db, 'donations'), () => {
+        calculateUnread();
+      });
+    } catch (err) {
+      console.warn('Navbar listeners failed:', err);
+    }
+
+    const handleFocus = () => {
+      calculateUnread();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    const interval = setInterval(calculateUnread, 3000);
+
+    return () => {
+      unsubscribeMessages();
+      unsubscribeRequests();
+      unsubscribeDonations();
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, [user]);
 
   return (
     <nav className="bg-black border-b border-[#FF8C00]/20 sticky top-0 z-50">
@@ -70,8 +202,15 @@ export default function Navbar({ user, profile }: NavbarProps) {
             <Calendar size={18} />
             <span className="hidden md:inline">Eventos</span>
           </Link>
-          <Link to="/chats" className="hover:text-[#FF8C00] transition-colors flex items-center space-x-1">
-            <MessageSquare size={18} />
+          <Link to="/chats" className="hover:text-[#FF8C00] transition-colors flex items-center space-x-2 relative pr-1">
+            <div className="relative">
+              <MessageSquare size={18} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-[#FF8C00] text-black text-[9px] font-black h-4.5 w-4.5 rounded-full flex items-center justify-center border border-black animate-pulse">
+                  {unreadCount}
+                </span>
+              )}
+            </div>
             <span className="hidden md:inline">Chats</span>
           </Link>
 

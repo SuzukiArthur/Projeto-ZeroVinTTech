@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { Donation } from '../types';
 import { MessageSquare, Package, ArrowRight, User } from 'lucide-react';
@@ -17,19 +17,26 @@ export default function Chats() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        const user = auth.currentUser;
-        if (!user) {
-          setLoading(false);
-          return;
-        }
+    const user = auth.currentUser;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
+    let unsubscribeMessages = () => {};
+    let unsubscribeRequests = () => {};
+    let unsubscribeDonations = () => {};
+
+    const loadAndMergeData = async () => {
+      try {
         // 1. Get all mock donations
         const allMockDonations: Donation[] = JSON.parse(localStorage.getItem('mockDonations') || '[]');
         
         // 2. Get all mock messages
         const allMockMessages = JSON.parse(localStorage.getItem('mockMessages') || '[]');
+
+        // 2b. Get all mock requests
+        const allMockRequests = JSON.parse(localStorage.getItem('mockRequests') || '[]');
 
         // 3. Fetch real donations from Firestore
         let realDonations: Donation[] = [];
@@ -47,6 +54,15 @@ export default function Chats() {
           realMessages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (err) {
           console.warn('Firestore fetch messages error:', err);
+        }
+
+        // 4b. Fetch real requests from Firestore
+        let realRequests: any[] = [];
+        try {
+          const snap = await getDocs(collection(db, 'requests'));
+          realRequests = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (err) {
+          console.warn('Firestore fetch requests error:', err);
         }
 
         // Merge donations
@@ -72,6 +88,18 @@ export default function Chats() {
           }
         });
         const mergedMessages = Array.from(msgMap.values());
+
+        // Merge requests
+        const reqMap = new Map<string, any>();
+        realRequests.forEach(r => {
+          if (r.id) reqMap.set(r.id, r);
+        });
+        allMockRequests.forEach((r: any) => {
+          if (r.id && !reqMap.has(r.id)) {
+            reqMap.set(r.id, r);
+          }
+        });
+        const mergedRequests = Array.from(reqMap.values());
         
         // Find all unique donationIds that have messages
         const uniqueDonationIds: string[] = Array.from(new Set(mergedMessages.map((m: any) => m.donationId)));
@@ -85,8 +113,13 @@ export default function Chats() {
           
           // Check if current user is participant:
           // - Either they are the donor
+          // - Or they are the requester of a request for this donation
           // - Or they sent/received at least one message in this chat
-          const isParticipant = donationObj.donorId === user.uid || roomMessages.some(m => m.senderId === user.uid);
+          const isDonor = donationObj.donorId === user.uid;
+          const isRequester = mergedRequests.some(r => r.donationId === dId && r.requesterId === user.uid);
+          const hasSentMessage = roomMessages.some(m => m.senderId === user.uid);
+
+          const isParticipant = isDonor || isRequester || hasSentMessage;
           if (!isParticipant) return null;
 
           return {
@@ -107,7 +140,29 @@ export default function Chats() {
       }
     };
 
-    fetchRooms();
+    // Run first
+    loadAndMergeData();
+
+    // Listen to changes in Firestore
+    try {
+      unsubscribeMessages = onSnapshot(collection(db, 'messages'), () => {
+        loadAndMergeData();
+      });
+      unsubscribeRequests = onSnapshot(collection(db, 'requests'), () => {
+        loadAndMergeData();
+      });
+      unsubscribeDonations = onSnapshot(collection(db, 'donations'), () => {
+        loadAndMergeData();
+      });
+    } catch (err) {
+      console.warn('Real-time listener setup error (expected in mock mode):', err);
+    }
+
+    return () => {
+      unsubscribeMessages();
+      unsubscribeRequests();
+      unsubscribeDonations();
+    };
   }, []);
 
   if (loading) {
