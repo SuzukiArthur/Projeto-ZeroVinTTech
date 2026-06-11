@@ -90,12 +90,12 @@ export default function Navbar({ user, profile }: NavbarProps) {
                 >
                   {profile?.photoURL ? (
                     <div className="w-8 h-8 rounded-full overflow-hidden border border-[#FF8C00]/30 hover:border-[#FF8C00]/80 transition-colors">
-                      <img src={profile.photoURL} alt={profile.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <img src={profile.photoURL} alt={profile?.name || ''} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     </div>
                   ) : (
                     <UserIcon size={18} />
                   )}
-                  <span className="hidden md:inline font-semibold">{profile?.name.split(' ')[0] || 'Perfil'}</span>
+                  <span className="hidden md:inline font-semibold">{profile?.name ? profile.name.split(' ')[0] : 'Perfil'}</span>
                 </button>
 
                 {dropdownOpen && (

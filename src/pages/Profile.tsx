@@ -137,9 +137,9 @@ export default function Profile({ profile }: ProfileProps) {
         <div className="relative group">
           <div className="w-24 h-24 bg-[#FF8C00] rounded-3xl flex items-center justify-center text-black font-black text-4xl shadow-[0_0_30px_rgba(255,140,0,0.2)] overflow-hidden">
             {profile?.photoURL ? (
-              <img src={profile.photoURL} alt={profile.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              <img src={profile.photoURL} alt={profile?.name || ''} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
             ) : (
-              profile?.name.charAt(0)
+              profile?.name ? profile.name.charAt(0) : 'U'
             )}
           </div>
           <label className="absolute -bottom-2 -right-2 bg-zinc-800 p-2 rounded-full border border-zinc-700 hover:bg-zinc-700 transition-colors shadow-lg cursor-pointer">
