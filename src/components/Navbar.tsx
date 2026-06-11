@@ -55,12 +55,10 @@ export default function Navbar({ user, profile }: NavbarProps) {
             <Calendar size={18} />
             <span className="hidden md:inline">Eventos</span>
           </Link>
-          {user && (
-            <Link to="/chats" className="hover:text-[#FF8C00] transition-colors flex items-center space-x-1">
-              <MessageSquare size={18} />
-              <span className="hidden md:inline">Chats</span>
-            </Link>
-          )}
+          <Link to="/chats" className="hover:text-[#FF8C00] transition-colors flex items-center space-x-1">
+            <MessageSquare size={18} />
+            <span className="hidden md:inline">Chats</span>
+          </Link>
 
           {user ? (
             <>

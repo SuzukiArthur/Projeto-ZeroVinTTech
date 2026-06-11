@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
-import { db } from '../firebase';
+import { auth, db } from '../firebase';
 import { Donation } from '../types';
 import { MessageSquare, Package, ArrowRight, User } from 'lucide-react';
 
@@ -19,12 +19,11 @@ export default function Chats() {
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const mockUserStr = localStorage.getItem('mockUser');
-        if (!mockUserStr) {
+        const user = auth.currentUser;
+        if (!user) {
           setLoading(false);
           return;
         }
-        const mockUser = JSON.parse(mockUserStr);
 
         // 1. Get all mock donations
         const allMockDonations: Donation[] = JSON.parse(localStorage.getItem('mockDonations') || '[]');

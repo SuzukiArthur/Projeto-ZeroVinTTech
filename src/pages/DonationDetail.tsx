@@ -48,40 +48,64 @@ export default function DonationDetail() {
 
   const handleRequest = async (e: any) => {
     e.preventDefault();
-    const mockUserStr = localStorage.getItem('mockUser');
-    if (!mockUserStr || !donation || !id) return;
+    const user = auth.currentUser;
+    if (!user || !donation || !id) return;
     
-    const mockUser = JSON.parse(mockUserStr);
     setRequesting(true);
     setError('');
     
     try {
-      // Create mock request
-      const newRequest = {
-        id: 'req-' + Date.now(),
+      let requesterName = user.displayName || user.email?.split('@')[0] || 'Aluno';
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          requesterName = userDoc.data().name || requesterName;
+        }
+      } catch (profileErr) {
+        console.warn(profileErr);
+      }
+
+      const isoDate = new Date().toISOString();
+      const newRequestFields = {
         donationId: id,
-        requesterId: mockUser.uid,
-        requesterName: mockUser.displayName || 'Usuário Teste',
+        donationTitle: donation.title,
+        donorId: donation.donorId,
+        requesterId: user.uid,
+        requesterName: requesterName,
         explanation,
-        status: 'pending',
-        createdAt: new Date().toISOString()
+        status: 'pending' as const,
+        createdAt: isoDate
+      };
+
+      // Add request and update donation in Firestore
+      let docRef;
+      try {
+        docRef = await addDoc(collection(db, 'requests'), newRequestFields);
+        await updateDoc(doc(db, 'donations', id), {
+          status: 'requested'
+        });
+      } catch (firestoreErr) {
+        console.error('Error updating Firestore:', firestoreErr);
+        handleFirestoreError(firestoreErr, OperationType.WRITE, 'requests');
+      }
+
+      // Local storage fallback sync
+      const newRequest = {
+        id: docRef ? docRef.id : 'gen-req-' + Date.now(),
+        ...newRequestFields
       };
 
       const existingRequests = JSON.parse(localStorage.getItem('mockRequests') || '[]');
       localStorage.setItem('mockRequests', JSON.stringify([newRequest, ...existingRequests]));
 
-      // Update mock donation status in localStorage
       const mockDonations = JSON.parse(localStorage.getItem('mockDonations') || '[]');
       const updatedDonations = mockDonations.map((d: any) => 
         d.id === id ? { ...d, status: 'requested' } : d
       );
       localStorage.setItem('mockDonations', JSON.stringify(updatedDonations));
-
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 800));
       
       setSuccess(true);
-    } catch (err) {
+    } catch (err: any) {
       setError('Erro ao enviar solicitação. Tente novamente.');
       console.error(err);
     } finally {
@@ -92,9 +116,8 @@ export default function DonationDetail() {
   if (loading) return <div className="text-center py-20">Carregando...</div>;
   if (!donation) return null;
 
-  const mockUserStr = localStorage.getItem('mockUser');
-  const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
-  const isOwner = mockUser?.uid === donation.donorId;
+  const currentUser = auth.currentUser;
+  const isOwner = currentUser?.uid === donation.donorId;
 
   return (
     <div className="max-w-5xl mx-auto pb-20">

@@ -29,50 +29,57 @@ export default function Profile({ profile }: ProfileProps) {
         const base64String = reader.result as string;
         setPhotoUrl(base64String);
         
-        // Auto-save when file is selected
-        const mockUserStr = localStorage.getItem('mockUser');
-        if (!mockUserStr) return;
-        const mockUser = JSON.parse(mockUserStr);
-        const updatedUser = { ...mockUser, photoURL: base64String };
-        localStorage.setItem('mockUser', JSON.stringify(updatedUser));
-        window.location.reload();
+        // Save directly to Firestore for the authenticated user
+        if (auth.currentUser) {
+          updateDoc(doc(db, 'users', auth.currentUser.uid), {
+            photoURL: base64String
+          }).then(() => {
+            window.location.reload();
+          });
+        }
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const handleUpdatePhoto = () => {
-    const mockUserStr = localStorage.getItem('mockUser');
-    if (!mockUserStr) return;
-    const mockUser = JSON.parse(mockUserStr);
-    const updatedUser = { ...mockUser, photoURL: photoUrl };
-    localStorage.setItem('mockUser', JSON.stringify(updatedUser));
-    setIsEditingPhoto(false);
-    window.location.reload(); // Refresh to update profile across app
+  const handleUpdatePhoto = async () => {
+    if (auth.currentUser) {
+      try {
+        await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+          photoURL: photoUrl
+        });
+        setIsEditingPhoto(false);
+        window.location.reload();
+      } catch (err) {
+        console.error('Error updating photo:', err);
+      }
+    }
   };
 
-  const handleDeleteAccount = () => {
-    // In a real app, we would call a backend API
-    // In this mock app, we just clear the session and redirect
-    localStorage.removeItem('mockUser');
-    localStorage.removeItem('originalMockUser');
+  const handleDeleteAccount = async () => {
+    if (auth.currentUser) {
+      try {
+        await auth.currentUser.delete();
+      } catch (err) {
+        console.error('Error deleting account:', err);
+      }
+    }
     window.location.href = '/login';
   };
 
   useEffect(() => {
     const fetchData = async () => {
-      const mockUserStr = localStorage.getItem('mockUser');
-      if (!mockUserStr) return;
-      const mockUser = JSON.parse(mockUserStr);
+      const user = auth.currentUser;
+      if (!user) return;
       
       try {
-        // Fetch mock donations
+        // Fetch mock/real local donations
         const allMockDonations = JSON.parse(localStorage.getItem('mockDonations') || '[]');
-        const myMockDonations = allMockDonations.filter((d: any) => d.donorId === mockUser.uid);
+        const myMockDonations = allMockDonations.filter((d: any) => d.donorId === user.uid);
         
-        // Fetch mock requests
+        // Fetch mock/real local requests
         const allMockRequests = JSON.parse(localStorage.getItem('mockRequests') || '[]');
-        const myMockRequests = allMockRequests.filter((r: any) => r.requesterId === mockUser.uid);
+        const myMockRequests = allMockRequests.filter((r: any) => r.requesterId === user.uid);
         
         // Fetch incoming requests
         const myDonationIds = myMockDonations.map((d: any) => d.id);

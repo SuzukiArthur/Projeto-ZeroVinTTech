@@ -77,21 +77,21 @@ export default function Chat() {
   }, [messages]);
 
   const handleSendMessage = async (text: string) => {
-    const mockUserStr = localStorage.getItem('mockUser');
-    if (!text.trim() || !mockUserStr || !donationId) return;
-    const mockUser = JSON.parse(mockUserStr);
+    const user = auth.currentUser;
+    if (!text.trim() || !user || !donationId) return;
 
     try {
+      const userPhoto = user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user.uid}`;
       const newMessageObj = {
         id: 'msg-' + Date.now(),
         donationId,
-        senderId: mockUser.uid,
-        senderPhotoURL: mockUser.photoURL,
+        senderId: user.uid,
+        senderPhotoURL: userPhoto,
         text,
         createdAt: new Date().toISOString()
       };
 
-      // Save to mock storage
+      // Save to mock storage (for immediate reactive feedback)
       const existingMessages = JSON.parse(localStorage.getItem('mockMessages') || '[]');
       localStorage.setItem('mockMessages', JSON.stringify([...existingMessages, newMessageObj]));
       
@@ -99,16 +99,17 @@ export default function Chat() {
       setMessages(prev => [...prev, newMessageObj]);
       setNewMessage('');
 
-      // Optional: Try real Firestore
+      // Try actual Firestore (source of truth)
       try {
         await addDoc(collection(db, 'messages'), {
           donationId,
-          senderId: mockUser.uid,
+          senderId: user.uid,
+          senderPhotoURL: userPhoto,
           text,
-          createdAt: serverTimestamp()
+          createdAt: new Date().toISOString()
         });
       } catch (e) {
-        // Ignore firestore errors in mock mode
+        console.warn('Real Message Firestore Error:', e);
       }
     } catch (err) {
       console.error('Error sending message:', err);
@@ -122,9 +123,8 @@ export default function Chat() {
     setMessages([]);
   };
 
-  const mockUserStr = localStorage.getItem('mockUser');
-  const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
-  const currentUserName = mockUser?.displayName || 'Você';
+  const user = auth.currentUser;
+  const currentUserName = user?.displayName || user?.email?.split('@')[0] || 'Você';
 
   if (loading) return <div className="text-center py-20">Carregando chat...</div>;
 
@@ -162,9 +162,7 @@ export default function Chat() {
       {/* Messages Area */}
       <div className="flex-grow overflow-y-auto p-8 space-y-6 scrollbar-hide bg-black/20">
         {messages.map((msg) => {
-          const mockUserStr = localStorage.getItem('mockUser');
-          const mockUser = mockUserStr ? JSON.parse(mockUserStr) : null;
-          const isMe = msg.senderId === (mockUser?.uid || auth.currentUser?.uid);
+          const isMe = msg.senderId === auth.currentUser?.uid;
           return (
             <div key={msg.id} className={`flex items-end space-x-2 ${isMe ? 'flex-row-reverse space-x-reverse' : 'flex-row'}`}>
               <div className="w-8 h-8 rounded-full bg-zinc-800 flex-shrink-0 overflow-hidden border border-zinc-700">

@@ -2,7 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, db } from './firebase';
-import { doc, getDoc, getDocFromServer } from 'firebase/firestore';
+import { doc, getDoc, getDocFromServer, setDoc } from 'firebase/firestore';
 import { UserProfile } from './types';
 
 // Pages
@@ -46,6 +46,17 @@ export default function App() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           setProfile(docSnap.data() as UserProfile);
+        } else {
+          const defaultProfile: UserProfile = {
+            uid: firebaseUser.uid,
+            name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'Aluno Unisales',
+            email: firebaseUser.email || '',
+            ra: '00000000',
+            photoURL: firebaseUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${firebaseUser.uid}`,
+            role: 'student'
+          };
+          await setDoc(docRef, defaultProfile);
+          setProfile(defaultProfile);
         }
       } else {
         setProfile(null);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { DonationCondition, DonationCategory } from '../types';
 import { handleFirestoreError, OperationType } from '../utils/error-handler';
@@ -41,50 +41,60 @@ export default function CreateDonation() {
 
   const handleSubmit = async (e: any) => {
     e.preventDefault();
-    const mockUserStr = localStorage.getItem('mockUser');
-    if (!mockUserStr) {
+    const user = auth.currentUser;
+    if (!user) {
       setError('Você precisa estar logado para publicar.');
       return;
     }
     
-    const mockUser = JSON.parse(mockUserStr);
     setLoading(true);
     setError('');
     
     try {
-      const newDonation = {
-        id: 'mock-' + Date.now(),
+      let donorName = user.displayName || user.email?.split('@')[0] || 'Aluno';
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const profileData = userDoc.data();
+          donorName = profileData.name || donorName;
+        }
+      } catch (profileErr) {
+        console.warn('Could not read user profile from Firestore:', profileErr);
+      }
+
+      const isoDate = new Date().toISOString();
+      const newDonationFields = {
         title,
         description,
         category,
         condition,
         photos: photos.length > 0 ? photos : [`https://picsum.photos/seed/${Date.now()}/800/600`],
-        donorId: mockUser.uid,
-        donorName: mockUser.displayName || 'Usuário Teste',
-        status: 'available',
-        createdAt: new Date().toISOString()
+        donorId: user.uid,
+        donorName: donorName,
+        status: 'available' as const,
+        createdAt: isoDate
       };
 
-      // Save to mock storage
+      // Add to Firestore (source of truth)
+      let docRef;
+      try {
+        docRef = await addDoc(collection(db, 'donations'), newDonationFields);
+      } catch (firestoreErr) {
+        console.error('Error adding to Firestore:', firestoreErr);
+        handleFirestoreError(firestoreErr, OperationType.WRITE, 'donations');
+      }
+
+      // Sync to local mock storage as responsive UI fallback
+      const newDonation = {
+        id: docRef ? docRef.id : 'gen-' + Date.now(),
+        ...newDonationFields
+      };
       const existingDonations = JSON.parse(localStorage.getItem('mockDonations') || '[]');
       localStorage.setItem('mockDonations', JSON.stringify([newDonation, ...existingDonations]));
       
-      // Try to save to real Firestore (optional)
-      try {
-        await addDoc(collection(db, 'donations'), {
-          ...newDonation,
-          createdAt: serverTimestamp()
-        });
-      } catch (e) {
-        console.log('Firestore not configured, using mock data only');
-      }
-      
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
       navigate('/');
-    } catch (err) {
-      setError('Erro ao criar anúncio. Tente novamente.');
+    } catch (err: any) {
+      setError('Erro ao criar anúncio. Verifique sua conexão e tente novamente.');
       console.error(err);
     } finally {
       setLoading(false);
