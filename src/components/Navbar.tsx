@@ -19,7 +19,7 @@ export default function Navbar({ user, profile }: NavbarProps) {
     localStorage.removeItem('mockUser');
     localStorage.removeItem('originalMockUser');
     await auth.signOut();
-    window.location.href = '/login'; // Force reload to clear state
+    window.location.href = '/'; // Force reload to clear state
   };
 
   useEffect(() => {

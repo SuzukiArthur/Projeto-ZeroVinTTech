@@ -25,7 +25,7 @@ export default function Profile({ profile }: ProfileProps) {
     localStorage.removeItem('mockUser');
     localStorage.removeItem('originalMockUser');
     await auth.signOut();
-    window.location.href = '/login';
+    window.location.href = '/';
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -71,7 +71,7 @@ export default function Profile({ profile }: ProfileProps) {
         console.error('Error deleting account:', err);
       }
     }
-    window.location.href = '/login';
+    window.location.href = '/';
   };
 
   useEffect(() => {
@@ -88,13 +88,79 @@ export default function Profile({ profile }: ProfileProps) {
         const allMockRequests = JSON.parse(localStorage.getItem('mockRequests') || '[]');
         const myMockRequests = allMockRequests.filter((r: any) => r.requesterId === user.uid);
         
-        // Fetch incoming requests
+        // Fetch incoming mock requests
         const myDonationIds = myMockDonations.map((d: any) => d.id);
         const incomingMockRequests = allMockRequests.filter((r: any) => myDonationIds.includes(r.donationId));
 
-        setMyDonations(myMockDonations);
-        setMyRequests(myMockRequests);
-        setIncomingRequests(incomingMockRequests);
+        // Fetch real Firestore data
+        let realMyDonations: Donation[] = [];
+        let realMyRequests: DonationRequest[] = [];
+        let realIncomingRequests: DonationRequest[] = [];
+
+        try {
+          // My Donations from Firestore
+          const qMyDonations = query(
+            collection(db, 'donations'),
+            where('donorId', '==', user.uid)
+          );
+          const snapMyDonations = await getDocs(qMyDonations);
+          realMyDonations = snapMyDonations.docs.map(doc => ({ id: doc.id, ...doc.data() } as Donation));
+
+          // My Requests from Firestore
+          const qMyRequests = query(
+            collection(db, 'requests'),
+            where('requesterId', '==', user.uid)
+          );
+          const snapMyRequests = await getDocs(qMyRequests);
+          realMyRequests = snapMyRequests.docs.map(doc => ({ id: doc.id, ...doc.data() } as DonationRequest));
+
+          // Incoming Requests to Me from Firestore
+          const qIncomingRequests = query(
+            collection(db, 'requests'),
+            where('donorId', '==', user.uid)
+          );
+          const snapIncomingRequests = await getDocs(qIncomingRequests);
+          realIncomingRequests = snapIncomingRequests.docs.map(doc => ({ id: doc.id, ...doc.data() } as DonationRequest));
+        } catch (dbErr) {
+          console.log('Firestore request/donations fetch failed or not configured, relying solely on local fallback:', dbErr);
+        }
+
+        // Merge & Deduplicate My Donations
+        const donationsMap = new Map<string, Donation>();
+        realMyDonations.forEach(d => {
+          if (d.id) donationsMap.set(d.id, d);
+        });
+        myMockDonations.forEach((d: any) => {
+          if (d.id && !donationsMap.has(d.id)) {
+            donationsMap.set(d.id, d);
+          }
+        });
+
+        // Merge & Deduplicate My Requests
+        const myReqMap = new Map<string, DonationRequest>();
+        realMyRequests.forEach(r => {
+          if (r.id) myReqMap.set(r.id, r);
+        });
+        myMockRequests.forEach((r: any) => {
+          if (r.id && !myReqMap.has(r.id)) {
+            myReqMap.set(r.id, r);
+          }
+        });
+
+        // Merge & Deduplicate Incoming Requests
+        const incomingReqMap = new Map<string, DonationRequest>();
+        realIncomingRequests.forEach(r => {
+          if (r.id) incomingReqMap.set(r.id, r);
+        });
+        incomingMockRequests.forEach((r: any) => {
+          if (r.id && !incomingReqMap.has(r.id)) {
+            incomingReqMap.set(r.id, r);
+          }
+        });
+
+        setMyDonations(Array.from(donationsMap.values()));
+        setMyRequests(Array.from(myReqMap.values()));
+        setIncomingRequests(Array.from(incomingReqMap.values()));
       } catch (err) {
         console.error('Error fetching profile data:', err);
       } finally {
@@ -107,14 +173,24 @@ export default function Profile({ profile }: ProfileProps) {
 
   const handleRequestStatus = async (requestId: string, donationId: string, status: 'accepted' | 'rejected') => {
     try {
-      // Update mock requests
+      // 1. Try real Firestore updates
+      try {
+        await updateDoc(doc(db, 'requests', requestId), { status });
+        await updateDoc(doc(db, 'donations', donationId), { 
+          status: status === 'accepted' ? 'donated' : 'available' 
+        });
+      } catch (firestoreErr) {
+        console.warn('Unable to write request status response to Firestore:', firestoreErr);
+      }
+
+      // 2. Fallback update mock requests in local storage
       const allMockRequests = JSON.parse(localStorage.getItem('mockRequests') || '[]');
       const updatedRequests = allMockRequests.map((r: any) => 
         r.id === requestId ? { ...r, status } : r
       );
       localStorage.setItem('mockRequests', JSON.stringify(updatedRequests));
 
-      // Update mock donations
+      // 3. Fallback update mock donations in local storage
       const allMockDonations = JSON.parse(localStorage.getItem('mockDonations') || '[]');
       const updatedDonations = allMockDonations.map((d: any) => 
         d.id === donationId ? { ...d, status: status === 'accepted' ? 'donated' : 'available' } : d
