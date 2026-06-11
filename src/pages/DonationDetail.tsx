@@ -81,12 +81,16 @@ export default function DonationDetail() {
       let docRef;
       try {
         docRef = await addDoc(collection(db, 'requests'), newRequestFields);
+      } catch (reqErr) {
+        console.warn('Real Request Firestore Error:', reqErr);
+      }
+
+      try {
         await updateDoc(doc(db, 'donations', id), {
           status: 'requested'
         });
-      } catch (firestoreErr) {
-        console.error('Error updating Firestore:', firestoreErr);
-        handleFirestoreError(firestoreErr, OperationType.WRITE, 'requests');
+      } catch (updateErr) {
+        console.warn('Could not update donation status in Firestore:', updateErr);
       }
 
       // Local storage fallback sync
