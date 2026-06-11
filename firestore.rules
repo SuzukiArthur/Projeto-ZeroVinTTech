@@ -96,11 +96,13 @@ service cloud.firestore {
     match /requests/{requestId} {
       allow read: if isAuthenticated() && 
                     (resource.data.requesterId == request.auth.uid || 
+                     resource.data.donorId == request.auth.uid ||
                      get(/databases/$(database)/documents/donations/$(resource.data.donationId)).data.donorId == request.auth.uid ||
                      isAdmin());
       allow create: if isAuthenticated() && request.resource.data.requesterId == request.auth.uid && isValidRequest(request.resource.data);
       allow update: if isAuthenticated() && 
                       ((resource.data.requesterId == request.auth.uid && request.resource.data.status == resource.data.status) || 
+                       resource.data.donorId == request.auth.uid ||
                        (get(/databases/$(database)/documents/donations/$(resource.data.donationId)).data.donorId == request.auth.uid) ||
                        isAdmin()) && isValidRequest(request.resource.data);
     }

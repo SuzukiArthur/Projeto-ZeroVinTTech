@@ -87,10 +87,6 @@ export default function Profile({ profile }: ProfileProps) {
         // Fetch mock/real local requests
         const allMockRequests = JSON.parse(localStorage.getItem('mockRequests') || '[]');
         const myMockRequests = allMockRequests.filter((r: any) => r.requesterId === user.uid);
-        
-        // Fetch incoming mock requests
-        const myDonationIds = myMockDonations.map((d: any) => d.id);
-        const incomingMockRequests = allMockRequests.filter((r: any) => myDonationIds.includes(r.donationId));
 
         // Fetch real Firestore data
         let realMyDonations: Donation[] = [];
@@ -136,6 +132,11 @@ export default function Profile({ profile }: ProfileProps) {
           }
         });
 
+        // Compute incoming mock requests based on the complete list of unique donations
+        const completeDonations = Array.from(donationsMap.values());
+        const myDonationIds = completeDonations.map((d: any) => d.id);
+        const incomingMockRequests = allMockRequests.filter((r: any) => myDonationIds.includes(r.donationId));
+
         // Merge & Deduplicate My Requests
         const myReqMap = new Map<string, DonationRequest>();
         realMyRequests.forEach(r => {
@@ -158,7 +159,7 @@ export default function Profile({ profile }: ProfileProps) {
           }
         });
 
-        setMyDonations(Array.from(donationsMap.values()));
+        setMyDonations(completeDonations);
         setMyRequests(Array.from(myReqMap.values()));
         setIncomingRequests(Array.from(incomingReqMap.values()));
       } catch (err) {
@@ -169,7 +170,7 @@ export default function Profile({ profile }: ProfileProps) {
     };
 
     fetchData();
-  }, []);
+  }, [profile]);
 
   const handleRequestStatus = async (requestId: string, donationId: string, status: 'accepted' | 'rejected') => {
     try {
