@@ -57,6 +57,9 @@ service cloud.firestore {
              data.status in ['pending', 'accepted', 'rejected'];
     }
 
+    // ===============================================================
+    // Domain Validators for Chats and Messages
+    // ===============================================================
     function isValidChat(data) {
       return data.keys().hasAll(['donationId', 'donorId', 'requesterId', 'donationTitle']) &&
              data.donationId is string && data.donorId is string &&
@@ -89,7 +92,11 @@ service cloud.firestore {
     match /donations/{donationId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.resource.data.donorId == request.auth.uid && isValidDonation(request.resource.data);
-      allow update: if isAuthenticated() && (resource.data.donorId == request.auth.uid || isAdmin()) && isValidDonation(request.resource.data);
+      allow update: if isAuthenticated() && 
+                      ((resource.data.donorId == request.auth.uid || 
+                        resource.data.status == 'available' || 
+                        resource.data.status == 'requested' || 
+                        isAdmin()) && isValidDonation(request.resource.data));
       allow delete: if isAuthenticated() && (resource.data.donorId == request.auth.uid || isAdmin());
     }
 
@@ -97,13 +104,15 @@ service cloud.firestore {
       allow read: if isAuthenticated() && 
                     (resource.data.requesterId == request.auth.uid || 
                      resource.data.donorId == request.auth.uid ||
-                     get(/databases/$(database)/documents/donations/$(resource.data.donationId)).data.donorId == request.auth.uid ||
+                     (exists(/databases/$(database)/documents/donations/$(resource.data.donationId)) && 
+                      get(/databases/$(database)/documents/donations/$(resource.data.donationId)).data.donorId == request.auth.uid) ||
                      isAdmin());
       allow create: if isAuthenticated() && request.resource.data.requesterId == request.auth.uid && isValidRequest(request.resource.data);
       allow update: if isAuthenticated() && 
                       ((resource.data.requesterId == request.auth.uid && request.resource.data.status == resource.data.status) || 
                        resource.data.donorId == request.auth.uid ||
-                       (get(/databases/$(database)/documents/donations/$(resource.data.donationId)).data.donorId == request.auth.uid) ||
+                       (exists(/databases/$(database)/documents/donations/$(resource.data.donationId)) && 
+                        get(/databases/$(database)/documents/donations/$(resource.data.donationId)).data.donorId == request.auth.uid) ||
                        isAdmin()) && isValidRequest(request.resource.data);
     }
 
@@ -113,9 +122,11 @@ service cloud.firestore {
       allow update: if isAuthenticated() && (resource.data.donorId == request.auth.uid || resource.data.requesterId == request.auth.uid || isAdmin()) && isValidChat(request.resource.data);
 
       match /messages/{messageId} {
-        allow read: if isAuthenticated() && (get(/databases/$(database)/documents/chats/$(chatId)).data.donorId == request.auth.uid || 
-                                            get(/databases/$(database)/documents/chats/$(chatId)).data.requesterId == request.auth.uid || 
-                                            isAdmin());
+        allow read: if isAuthenticated() && 
+                    (exists(/databases/$(database)/documents/chats/$(chatId)) && 
+                     (get(/databases/$(database)/documents/chats/$(chatId)).data.donorId == request.auth.uid || 
+                      get(/databases/$(database)/documents/chats/$(chatId)).data.requesterId == request.auth.uid || 
+                      isAdmin()));
         allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid && isValidMessage(request.resource.data);
       }
     }

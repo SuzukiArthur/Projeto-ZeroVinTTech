@@ -40,15 +40,15 @@ export default function Home() {
         try {
           const q = query(
             collection(db, 'donations'),
-            where('status', '!=', 'donated'),
-            orderBy('status'),
             orderBy('createdAt', 'desc'),
-            limit(50)
+            limit(100)
           );
           const querySnapshot = await getDocs(q);
-          realDocs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Donation));
+          const rawDocs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Donation));
+          // Filter 'donated' status client-side to operate without index errors
+          realDocs = rawDocs.filter(d => d.status !== 'donated');
         } catch (e) {
-          console.log('Firestore not configured, using mock data only');
+          console.log('Firestore not configured, using mock data only', e);
         }
 
         // Deduplicate using a Map, prioritizing real Firestore documents
