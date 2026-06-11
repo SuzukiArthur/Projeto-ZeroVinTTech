@@ -51,8 +51,7 @@ export default function Chat() {
     // Optional: Real Firestore listener
     const q = query(
       collection(db, 'messages'),
-      where('donationId', '==', donationId),
-      orderBy('createdAt', 'asc')
+      where('donationId', '==', donationId)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -73,8 +72,15 @@ export default function Chat() {
         const combined = [...filteredPrev, ...msgs];
         const unique = Array.from(new Map(combined.map(m => [m.id, m])).values());
         return unique.sort((a, b) => {
-          const tA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
-          const tB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
+          const getMs = (dateVal: any) => {
+            if (!dateVal) return 0;
+            if (typeof dateVal.toDate === 'function') return dateVal.toDate().getTime();
+            if (dateVal.seconds) return dateVal.seconds * 1000;
+            const parsed = new Date(dateVal).getTime();
+            return isNaN(parsed) ? 0 : parsed;
+          };
+          const tA = getMs(a.createdAt);
+          const tB = getMs(b.createdAt);
           return tA - tB;
         });
       });

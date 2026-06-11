@@ -101,8 +101,13 @@ export default function Chats() {
         });
         const mergedRequests = Array.from(reqMap.values());
         
-        // Find all unique donationIds that have messages
-        const uniqueDonationIds: string[] = Array.from(new Set(mergedMessages.map((m: any) => m.donationId)));
+        // Find all unique donationIds that have messages OR have an accepted request
+        const msgDonationIds = mergedMessages.map((m: any) => m.donationId);
+        const acceptedReqDonationIds = mergedRequests
+          .filter((r: any) => r.status === 'accepted' && (r.requesterId === user.uid || r.donorId === user.uid))
+          .map((r: any) => r.donationId);
+        
+        const uniqueDonationIds: string[] = Array.from(new Set([...msgDonationIds, ...acceptedReqDonationIds]));
         
         const rooms: ChatRoom[] = uniqueDonationIds.map(dId => {
           const donationObj = mergedDonations.find((d: any) => d.id === dId);
@@ -122,11 +127,15 @@ export default function Chats() {
           const isParticipant = isDonor || isRequester || hasSentMessage;
           if (!isParticipant) return null;
 
+          // Resolve appropriate display format for date
+          const rawDate = lastMsg?.createdAt || donationObj.createdAt || new Date().toISOString();
+          const parsedDate = rawDate?.toDate ? rawDate.toDate().toISOString() : new Date(rawDate).toISOString();
+
           return {
             donationId: dId,
             donation: donationObj,
-            lastMessage: lastMsg?.text || 'Sem mensagens',
-            updatedAt: lastMsg?.createdAt || new Date().toISOString()
+            lastMessage: lastMsg?.text || 'Sem mensagens (Toque para iniciar a conversa)',
+            updatedAt: parsedDate
           };
         }).filter((room): room is ChatRoom => room !== null);
 

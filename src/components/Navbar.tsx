@@ -16,6 +16,7 @@ export default function Navbar({ user, profile }: NavbarProps) {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState(0);
 
   const handleLogout = async () => {
     localStorage.removeItem('mockUser');
@@ -128,6 +129,9 @@ export default function Navbar({ user, profile }: NavbarProps) {
           }
         });
 
+        // Compute pending requests received as donor
+        const pendingCount = mergedRequests.filter((r: any) => r.donorId === user.uid && r.status === 'pending').length;
+        setPendingRequestsCount(pendingCount);
         setUnreadCount(count);
       } catch (err) {
         console.error('Error calculating unread custom:', err);
@@ -225,15 +229,20 @@ export default function Navbar({ user, profile }: NavbarProps) {
               <div className="relative" ref={dropdownRef}>
                 <button 
                   onClick={() => setDropdownOpen(!dropdownOpen)} 
-                  className="hover:text-[#FF8C00] transition-colors flex items-center space-x-2 focus:outline-none cursor-pointer"
+                  className="hover:text-[#FF8C00] transition-colors flex items-center space-x-2 focus:outline-none cursor-pointer relative"
                 >
-                  {profile?.photoURL ? (
-                    <div className="w-8 h-8 rounded-full overflow-hidden border border-[#FF8C00]/30 hover:border-[#FF8C00]/80 transition-colors">
-                      <img src={profile.photoURL} alt={profile?.name || ''} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    </div>
-                  ) : (
-                    <UserIcon size={18} />
-                  )}
+                  <div className="relative">
+                    {profile?.photoURL ? (
+                      <div className="w-8 h-8 rounded-full overflow-hidden border border-[#FF8C00]/30 hover:border-[#FF8C00]/80 transition-colors">
+                        <img src={profile.photoURL} alt={profile?.name || ''} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      </div>
+                    ) : (
+                      <UserIcon size={18} />
+                    )}
+                    {pendingRequestsCount > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-[#FF8C00] h-2.5 w-2.5 rounded-full border border-black animate-pulse" />
+                    )}
+                  </div>
                   <span className="hidden md:inline font-semibold">{profile?.name ? profile.name.split(' ')[0] : 'Perfil'}</span>
                 </button>
 
@@ -242,10 +251,17 @@ export default function Navbar({ user, profile }: NavbarProps) {
                     <Link 
                       to="/profile" 
                       onClick={() => setDropdownOpen(false)}
-                      className="flex items-center space-x-2 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-900 transition-colors"
+                      className="flex items-center justify-between px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-900 transition-colors"
                     >
-                      <UserIcon size={16} className="text-[#FF8C00]" />
-                      <span>Meu Perfil</span>
+                      <div className="flex items-center space-x-2">
+                        <UserIcon size={16} className="text-[#FF8C00]" />
+                        <span>Meu Perfil</span>
+                      </div>
+                      {pendingRequestsCount > 0 && (
+                        <span className="bg-[#FF8C00] text-black text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                          {pendingRequestsCount}
+                        </span>
+                      )}
                     </Link>
                     <button 
                       onClick={() => {
