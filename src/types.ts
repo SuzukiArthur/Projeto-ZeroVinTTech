@@ -47,7 +47,8 @@ export interface Chat {
 
 export interface Message {
   id: string;
-  chatId: string;
+  chatId?: string;
+  donationId?: string;
   senderId: string;
   senderPhotoURL?: string;
   text: string;

@@ -57,16 +57,29 @@ export default function Chat() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const msgs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
-      if (msgs.length > 0) {
-        setMessages(prev => {
-          // Merge real messages with mock ones, avoiding duplicates by ID
-          const combined = [...prev, ...msgs];
-          const unique = Array.from(new Map(combined.map(m => [m.id, m])).values());
-          return unique.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+      setMessages(prev => {
+        // Filter out any mock message (ID starting with 'msg-') that has the exact same text, senderId, and donationId
+        // as a message from Firestore, to prevent duplicates
+        const filteredPrev = prev.filter(pMsg => {
+          if (!pMsg.id.startsWith('msg-')) return true; // Keep real messages
+          const hasRealEquivalent = msgs.some(rMsg => 
+            rMsg.senderId === pMsg.senderId && 
+            rMsg.text === pMsg.text && 
+            rMsg.donationId === pMsg.donationId
+          );
+          return !hasRealEquivalent;
         });
-      }
+
+        const combined = [...filteredPrev, ...msgs];
+        const unique = Array.from(new Map(combined.map(m => [m.id, m])).values());
+        return unique.sort((a, b) => {
+          const tA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt).getTime();
+          const tB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt).getTime();
+          return tA - tB;
+        });
+      });
     }, (error) => {
-      console.log('Firestore messages listener error (expected in mock mode)');
+      console.log('Firestore messages listener error:', error);
     });
 
     return () => unsubscribe();

@@ -30,22 +30,72 @@ export default function Chats() {
         
         // 2. Get all mock messages
         const allMockMessages = JSON.parse(localStorage.getItem('mockMessages') || '[]');
+
+        // 3. Fetch real donations from Firestore
+        let realDonations: Donation[] = [];
+        try {
+          const snap = await getDocs(collection(db, 'donations'));
+          realDonations = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Donation));
+        } catch (err) {
+          console.warn('Firestore fetch donations error:', err);
+        }
+
+        // 4. Fetch real messages from Firestore
+        let realMessages: any[] = [];
+        try {
+          const snap = await getDocs(collection(db, 'messages'));
+          realMessages = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (err) {
+          console.warn('Firestore fetch messages error:', err);
+        }
+
+        // Merge donations
+        const dMap = new Map<string, Donation>();
+        realDonations.forEach(d => {
+          if (d.id) dMap.set(d.id, d);
+        });
+        allMockDonations.forEach(d => {
+          if (d.id && !dMap.has(d.id)) {
+            dMap.set(d.id, d);
+          }
+        });
+        const mergedDonations = Array.from(dMap.values());
+
+        // Merge messages
+        const msgMap = new Map<string, any>();
+        realMessages.forEach(m => {
+          if (m.id) msgMap.set(m.id, m);
+        });
+        allMockMessages.forEach((m: any) => {
+          if (m.id && !msgMap.has(m.id)) {
+            msgMap.set(m.id, m);
+          }
+        });
+        const mergedMessages = Array.from(msgMap.values());
         
         // Find all unique donationIds that have messages
-        const uniqueDonationIds: string[] = Array.from(new Set(allMockMessages.map((m: any) => m.donationId)));
+        const uniqueDonationIds: string[] = Array.from(new Set(mergedMessages.map((m: any) => m.donationId)));
         
         const rooms: ChatRoom[] = uniqueDonationIds.map(dId => {
-          const donationObj = allMockDonations.find((d: any) => d.id === dId);
-          const roomMessages = allMockMessages.filter((m: any) => m.donationId === dId);
+          const donationObj = mergedDonations.find((d: any) => d.id === dId);
+          if (!donationObj) return null;
+
+          const roomMessages = mergedMessages.filter((m: any) => m.donationId === dId);
           const lastMsg = roomMessages[roomMessages.length - 1];
           
+          // Check if current user is participant:
+          // - Either they are the donor
+          // - Or they sent/received at least one message in this chat
+          const isParticipant = donationObj.donorId === user.uid || roomMessages.some(m => m.senderId === user.uid);
+          if (!isParticipant) return null;
+
           return {
             donationId: dId,
-            donation: donationObj!,
+            donation: donationObj,
             lastMessage: lastMsg?.text || 'Sem mensagens',
             updatedAt: lastMsg?.createdAt || new Date().toISOString()
           };
-        }).filter(room => room.donation !== undefined);
+        }).filter((room): room is ChatRoom => room !== null);
 
         // Sort by updatedAt descending
         rooms.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
