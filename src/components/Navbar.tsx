@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { User } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -11,6 +12,8 @@ interface NavbarProps {
 
 export default function Navbar({ user, profile }: NavbarProps) {
   const navigate = useNavigate();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const handleLogout = async () => {
     localStorage.removeItem('mockUser');
@@ -18,6 +21,18 @@ export default function Navbar({ user, profile }: NavbarProps) {
     await auth.signOut();
     window.location.href = '/login'; // Force reload to clear state
   };
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <nav className="bg-black border-b border-[#FF8C00]/20 sticky top-0 z-50">
@@ -66,19 +81,46 @@ export default function Navbar({ user, profile }: NavbarProps) {
                 <PlusCircle size={18} />
                 <span>Doar</span>
               </Link>
-              <Link to="/profile" className="hover:text-[#FF8C00] transition-colors flex items-center space-x-2">
-                {profile?.photoURL ? (
-                  <div className="w-8 h-8 rounded-full overflow-hidden border border-[#FF8C00]/30">
-                    <img src={profile.photoURL} alt={profile.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+              
+              {/* Profile Avatar Dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <button 
+                  onClick={() => setDropdownOpen(!dropdownOpen)} 
+                  className="hover:text-[#FF8C00] transition-colors flex items-center space-x-2 focus:outline-none cursor-pointer"
+                >
+                  {profile?.photoURL ? (
+                    <div className="w-8 h-8 rounded-full overflow-hidden border border-[#FF8C00]/30 hover:border-[#FF8C00]/80 transition-colors">
+                      <img src={profile.photoURL} alt={profile.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                  ) : (
+                    <UserIcon size={18} />
+                  )}
+                  <span className="hidden md:inline font-semibold">{profile?.name.split(' ')[0] || 'Perfil'}</span>
+                </button>
+
+                {dropdownOpen && (
+                  <div className="absolute right-0 mt-3 w-48 bg-zinc-950 border border-zinc-800 rounded-2xl py-2 shadow-[0_10px_30px_rgba(0,0,0,0.8)] z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                    <Link 
+                      to="/profile" 
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center space-x-2 px-4 py-3 text-sm text-zinc-300 hover:bg-zinc-900 transition-colors"
+                    >
+                      <UserIcon size={16} className="text-[#FF8C00]" />
+                      <span>Meu Perfil</span>
+                    </Link>
+                    <button 
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        handleLogout();
+                      }}
+                      className="w-full flex items-center space-x-2 px-4 py-3 text-sm text-red-500 hover:bg-red-500/10 transition-colors text-left"
+                    >
+                      <LogOut size={16} />
+                      <span>Sair do Perfil</span>
+                    </button>
                   </div>
-                ) : (
-                  <UserIcon size={18} />
                 )}
-                <span className="hidden md:inline">{profile?.name.split(' ')[0] || 'Perfil'}</span>
-              </Link>
-              <button onClick={handleLogout} className="hover:text-red-500 transition-colors">
-                <LogOut size={18} />
-              </button>
+              </div>
             </>
           ) : (
             <Link to="/login" className="bg-[#FF8C00] text-black px-6 py-1.5 rounded-full font-semibold hover:bg-[#FF8C00]/80 transition-colors">

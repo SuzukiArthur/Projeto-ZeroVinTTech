@@ -51,7 +51,29 @@ export default function Home() {
           console.log('Firestore not configured, using mock data only');
         }
 
-        const allDonations = [...mockDonations, ...realDocs].sort((a, b) => 
+        // Deduplicate using a Map, prioritizing real Firestore documents
+        const uniqueDonationsMap = new Map<string, Donation>();
+        
+        realDocs.forEach(d => {
+          if (d.id) {
+            uniqueDonationsMap.set(d.id, d);
+          }
+        });
+
+        mockDonations.forEach(d => {
+          const idToUse = d.id || `mock-${Date.now()}-${Math.random()}`;
+          // Check if this item is already represented by a document with the same ID or same title/donor combo
+          const compositeKey = `${d.title}-${d.donorId}`;
+          const isDuplicate = Array.from(uniqueDonationsMap.values()).some((existing) => 
+            existing.id === d.id || `${existing.title}-${existing.donorId}` === compositeKey
+          );
+          
+          if (!isDuplicate) {
+            uniqueDonationsMap.set(idToUse, d);
+          }
+        });
+
+        const allDonations = Array.from(uniqueDonationsMap.values()).sort((a, b) => 
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         

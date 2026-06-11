@@ -4,7 +4,7 @@ import { db, auth } from '../firebase';
 import { Donation, DonationRequest, UserProfile } from '../types';
 import { handleFirestoreError, OperationType } from '../utils/error-handler';
 import DonationCard from '../components/DonationCard';
-import { User, Package, Clock, Check, X, MessageSquare, Tag, Trash2, AlertTriangle } from 'lucide-react';
+import { User, Package, Clock, Check, X, MessageSquare, Tag, Trash2, AlertTriangle, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 interface ProfileProps {
@@ -20,6 +20,13 @@ export default function Profile({ profile }: ProfileProps) {
   const [photoUrl, setPhotoUrl] = useState(profile?.photoURL || '');
   const [isEditingPhoto, setIsEditingPhoto] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleLogout = async () => {
+    localStorage.removeItem('mockUser');
+    localStorage.removeItem('originalMockUser');
+    await auth.signOut();
+    window.location.href = '/login';
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -187,9 +194,18 @@ export default function Profile({ profile }: ProfileProps) {
             </>
           )}
         </div>
-        <Link to="/create-donation" className="bg-[#FF8C00] text-black px-8 py-3 rounded-full font-bold hover:bg-[#FF8C00]/90 transition-all">
-          Nova Doação
-        </Link>
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <Link to="/create-donation" className="bg-[#FF8C00] text-black px-8 py-3 rounded-full font-bold hover:bg-[#FF8C00]/90 transition-all text-center">
+            Nova Doação
+          </Link>
+          <button 
+            onClick={handleLogout}
+            className="bg-zinc-800 text-red-500 hover:bg-zinc-700/80 px-6 py-3 rounded-full font-bold border border-red-500/20 hover:border-red-500/40 transition-all flex items-center justify-center space-x-2 text-sm cursor-pointer"
+          >
+            <LogOut size={16} />
+            <span>Sair do Perfil</span>
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
