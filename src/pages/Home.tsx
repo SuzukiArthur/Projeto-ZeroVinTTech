@@ -24,66 +24,17 @@ export default function Home() {
     { id: 'rede', label: 'Rede', icon: Network },
   ];
 
-  const seedData = () => {
-    const samples: Donation[] = [
-      {
-        id: 'seed-1',
-        title: "Mouse Gamer Logitech G203",
-        description: "Mouse em perfeito estado, pouco uso. Acompanha caixa original.",
-        category: "periferico",
-        condition: "Usado - Bom",
-        photos: ["https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&q=80&w=800"],
-        donorName: "Carlos Silva",
-        donorId: "system-seed-1",
-        status: "available",
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'seed-2',
-        title: "Teclado Mecânico Redragon",
-        description: "Switch azul, funcionando perfeitamente. Ideal para quem está começando a programar.",
-        category: "periferico",
-        condition: "Usado - Bom",
-        photos: ["https://images.unsplash.com/photo-1511467687858-23d96c32e4ae?auto=format&fit=crop&q=80&w=800"],
-        donorName: "Ana Oliveira",
-        donorId: "system-seed-2",
-        status: "available",
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'seed-3',
-        title: "Monitor Samsung 24' Curvo",
-        description: "Pequeno detalhe na carcaça, mas a tela está 100%. Ótimo para produtividade.",
-        category: "periferico",
-        condition: "Usado - Bom",
-        photos: ["https://images.unsplash.com/photo-1527443224154-c4a3942d3acf?auto=format&fit=crop&q=80&w=800"],
-        donorName: "Bruno Santos",
-        donorId: "system-seed-3",
-        status: "available",
-        createdAt: new Date().toISOString()
-      },
-      {
-        id: 'seed-4',
-        title: "Placa de Vídeo GTX 1050 Ti",
-        description: "Funcionando perfeitamente, ideal para estudos de renderização.",
-        category: "componente eletronico",
-        condition: "Usado - Bom",
-        photos: ["https://images.unsplash.com/photo-1591488320449-011701bb6704?auto=format&fit=crop&q=80&w=800"],
-        donorName: "Mariana Lima",
-        donorId: "system-seed-4",
-        status: "available",
-        createdAt: new Date().toISOString()
-      }
-    ];
-
-    localStorage.setItem('mockDonations', JSON.stringify(samples));
-    window.location.reload();
-  };
-
   useEffect(() => {
     const fetchDonations = async () => {
       try {
-        const mockDonations = JSON.parse(localStorage.getItem('mockDonations') || '[]');
+        let mockDonations: Donation[] = JSON.parse(localStorage.getItem('mockDonations') || '[]');
+        
+        // Remove any existing system seed/example products
+        const hasSeeds = mockDonations.some(d => d.id?.startsWith('seed-') || d.donorId?.startsWith('system-seed-'));
+        if (hasSeeds) {
+          mockDonations = mockDonations.filter(d => !d.id?.startsWith('seed-') && !d.donorId?.startsWith('system-seed-'));
+          localStorage.setItem('mockDonations', JSON.stringify(mockDonations));
+        }
         
         let realDocs: Donation[] = [];
         try {
@@ -217,14 +168,6 @@ export default function Home() {
             <p className="text-zinc-500 mt-2">Confira os últimos itens postados pela comunidade.</p>
           </div>
           <div className="flex items-center space-x-4">
-            {donations.length === 0 && !loading && (
-              <button 
-                onClick={seedData}
-                className="text-xs font-bold uppercase tracking-widest text-[#FF8C00] border border-[#FF8C00]/30 px-4 py-2 rounded-full hover:bg-[#FF8C00]/10 transition-colors"
-              >
-                Gerar Exemplos
-              </button>
-            )}
           </div>
         </div>
 
